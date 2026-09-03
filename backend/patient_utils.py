@@ -52,6 +52,8 @@ def is_valid_patient_id(patient_id: str) -> bool:
     # Import the regular expression module for pattern matching
     import re
     
+    patient_id = patient_id.strip()
+    
     # Define the required pattern: PT- followed by exactly 6 digits
     pattern = r"^PT-\d{6}$"
     
