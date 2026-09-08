@@ -1,790 +1,263 @@
-# ============================================================
 # generate_data.py
 # CareSync Sample Data Generator
-# ============================================================
+#
+# This script populates the CareSync database with realistic test data.
+# Run this ONCE after creating your database and tables.
+# Running it twice will cause errors because some unique values will repeat.
+#
+# Required libraries. Install them before running this script:
+#   pip install mysql-connector-python
+#   pip install Faker
 
-# Install required libraries:
-# pip install mysql-connector-python
-# pip install Faker
-
-import mysql.connector
-import random
-from faker import Faker
+import mysql.connector       # connects Python to MySQL
+import random                # for generating random numbers and choices
+from faker import Faker      # generates realistic fake names, addresses, etc.
 from datetime import date, timedelta, datetime
+import decimal
 
-
-# ============================================================
-# FAKER
-# ============================================================
-
+# Create a Faker instance set to India so names look realistic.
 fake = Faker('en_IN')
 
-
-# ============================================================
-# DATABASE CONNECTION
-# ============================================================
-
+# ─── DATABASE CONNECTION ────────────────────────────────────────────────────
+# Change password if you used something different during MySQL setup.
 connection = mysql.connector.connect(
-    host='localhost',
-    port=3306,
-    user='root',
-    password='',
-    database='caresync'
+    host='localhost',      # MySQL is running on this same computer
+    port=3306,             # Default MySQL port
+    user='root',           # The administrator user
+    password='Admin@@12345',  # Your MySQL root password
+    database='caresync'    # The database we created
 )
-
 cursor = connection.cursor()
 
-print("Connected to MySQL successfully.")
+print('Connected to MySQL successfully.')
 
-
-# ============================================================
-# CONSTANTS
-# ============================================================
-
-NUM_DOCTORS = 40
-NUM_PATIENTS = 500
+# ─── CONSTANTS ──────────────────────────────────────────────────────────────
+NUM_DOCTORS      = 40
+NUM_PATIENTS     = 500
 NUM_APPOINTMENTS = 3000
-NUM_MEDICAL_RECORDS = 2000
-NUM_BILLS = 2500
-NUM_ACTIVITY_LOGS = 1000
+NUM_BILLS        = 2500
+BILL_REJECT_LOW  = 0.08   # 8 percent minimum rejection rate
+BILL_REJECT_HIGH = 0.12   # 12 percent maximum rejection rate
 
-NUM_ADMINS = 2
-NUM_BILLING_STAFF = 10
-
-
-# ============================================================
-# MASTER DATA
-# ============================================================
-
-SPECIALIZATIONS = [
-    'Cardiology',
-    'General Medicine',
-    'Orthopaedics',
-    'Gynaecology',
-    'Paediatrics',
-    'Neurology',
-    'Dermatology',
-    'Ophthalmology',
-    'ENT',
-    'Psychiatry',
-    'Oncology',
-    'Urology',
-    'Endocrinology'
+SPECIALISATIONS = [
+    'Cardiology', 'General Medicine', 'Orthopaedics', 'Gynaecology',
+    'Paediatrics', 'Neurology', 'Dermatology', 'Ophthalmology',
+    'ENT', 'Psychiatry', 'Oncology', 'Urology', 'Endocrinology'
 ]
 
-
-BLOOD_GROUPS = [
-    'A+', 'A-', 'B+', 'B-',
-    'O+', 'O-', 'AB+', 'AB-'
-]
-
+BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-']
 
 DIAGNOSES = [
-    'Hypertension',
-    'Type 2 Diabetes',
-    'Upper Respiratory Infection',
-    'Migraine',
-    'Lumbar Spondylosis',
-    'Anxiety Disorder',
-    'Anaemia',
-    'Hypothyroidism',
-    'Gastritis',
-    'Urinary Tract Infection',
-    'Dengue Fever',
-    'Viral Fever',
-    'Asthma',
-    'Arthritis',
-    'Obesity',
-    'Iron Deficiency',
-    'Vitamin D Deficiency',
-    'Sinusitis',
-    'Eczema'
+    'Hypertension', 'Type 2 Diabetes', 'Upper Respiratory Infection',
+    'Migraine', 'Lumbar Spondylosis', 'Anxiety Disorder', 'Anaemia',
+    'Hypothyroidism', 'Gastritis', 'Urinary Tract Infection',
+    'Dengue Fever', 'Viral Fever', 'Asthma', 'Arthritis', 'Obesity',
+    'Iron Deficiency', 'Vitamin D Deficiency', 'Sinusitis', 'Eczema'
 ]
-
-
-TESTS = [
-    'CBC',
-    'Blood Sugar',
-    'Lipid Profile',
-    'Liver Function Test',
-    'Kidney Function Test',
-    'Thyroid Test',
-    'Urine Test',
-    'X-Ray',
-    'MRI',
-    'CT Scan',
-    'ECG',
-    'Vitamin D Test'
-]
-
-
-INSURANCE_PROVIDERS = [
-    'Star Health Insurance',
-    'HDFC ERGO',
-    'ICICI Lombard',
-    'Bajaj Allianz',
-    'Care Health Insurance',
-    'Niva Bupa',
-    'Aditya Birla Health Insurance'
-]
-
 
 REJECTION_REASONS = [
-    'Insurance claim limit exceeded.',
-    'Procedure not covered under insurance plan.',
-    'Pre-authorisation was not obtained.',
-    'Patient not eligible under submitted policy.',
-    'Duplicate claim submitted.',
-    'Medical documents are incomplete.',
-    'Claim submitted after deadline.'
+    'Insurance claim limit exceeded for this policy year.',
+    'Procedure not covered under current insurance plan.',
+    'Pre-authorisation was not obtained before treatment.',
+    'Patient not eligible under submitted insurance policy number.',
+    'Duplicate claim submitted for the same service date.',
+    'Medical documents submitted are incomplete.',
+    'Claim submitted after the deadline specified by insurer.'
 ]
 
+# ─── STEP 1: INSERT DOCTORS ─────────────────────────────────────────────────
+print(f'Inserting {NUM_DOCTORS} doctors...')
 
-ACTIONS = [
-    'Login',
-    'Logout',
-    'View Profile',
-    'Book Appointment',
-    'Cancel Appointment',
-    'View Appointment',
-    'View Medical Record',
-    'Add Medical Record',
-    'Update Medical Record',
-    'View Billing',
-    'View Claim',
-    'Upload Report',
-    'View Report'
-]
-
-
-TARGET_TABLES = [
-    'patient',
-    'doctor',
-    'appointment',
-    'medical_record',
-    'billing'
-]
-
-
-# ============================================================
-# DEFAULT PASSWORD
-# ============================================================
-
-DEFAULT_PASSWORD = "CareSync@123"
-
-
-# ============================================================
-# HELPER FUNCTION - PHONE NUMBER
-# ============================================================
-
-def generate_phone():
-    return '9' + str(random.randint(100000000, 999999999))
-
-
-# ============================================================
-# STEP 1: INSERT ADMINS
-# ============================================================
-
-print()
-print(f"Inserting {NUM_ADMINS} admins...")
-
-admin_ids = []
-
-for i in range(NUM_ADMINS):
-
-    name = fake.name()
-    email = f"admin{i + 1}@caresync.in"
-    contact = generate_phone()
-    role = "Administrator"
-
-    cursor.execute(
-        """
-        INSERT INTO admin
-        (name, email, password_hash, contact, role)
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (
-            name,
-            email,
-            DEFAULT_PASSWORD,
-            contact,
-            role
-        )
-    )
-
-    admin_ids.append(cursor.lastrowid)
-
-
-connection.commit()
-
-print(f"Done. Inserted {len(admin_ids)} admins.")
-
-
-# ============================================================
-# STEP 2: INSERT BILLING STAFF
-# ============================================================
-
-print()
-print(f"Inserting {NUM_BILLING_STAFF} billing staff...")
-
-billing_staff_ids = []
-
-for i in range(NUM_BILLING_STAFF):
-
-    name = fake.name()
-    contact = generate_phone()
-    email = f"billing{i + 1}@caresync.in"
-    is_active = 1
-    department = "Billing Department"
-
-    cursor.execute(
-        """
-        INSERT INTO billing_staff
-        (name, contact, email, password_hash, is_active, department)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (
-            name,
-            contact,
-            email,
-            DEFAULT_PASSWORD,
-            is_active,
-            department
-        )
-    )
-
-    billing_staff_ids.append(cursor.lastrowid)
-
-
-connection.commit()
-
-print(f"Done. Inserted {len(billing_staff_ids)} billing staff.")
-
-
-# ============================================================
-# STEP 3: INSERT DOCTORS
-# ============================================================
-
-print()
-print(f"Inserting {NUM_DOCTORS} doctors...")
-
-doctor_ids = []
+doctor_ids = []  # We store the IDs so we can use them for appointments later.
 
 for i in range(NUM_DOCTORS):
-
-    name = "Dr. " + fake.name()
-    specialization = random.choice(SPECIALIZATIONS)
-    contact = generate_phone()
-    email = f"doctor{i + 1}@caresync.in"
-    is_active = 1
+    name   = 'Dr. ' + fake.name()
+    spec   = random.choice(SPECIALISATIONS)
+    phone  = '9' + str(random.randint(100000000, 999999999))  # 10-digit Indian number
+    email  = f'doctor{i+1}@caresync.in'  # Unique email using the loop counter
+    lic    = f'MCI-{2000 + i:04d}'       # Unique licence number
 
     cursor.execute(
-        """
-        INSERT INTO doctor
-        (name, specialization, contact, email, password_hash, is_active)
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (
-            name,
-            specialization,
-            contact,
-            email,
-            DEFAULT_PASSWORD,
-            is_active
-        )
+        '''
+        INSERT INTO doctor (full_name, specialisation, phone, email, licence_number)
+        VALUES (%s, %s, %s, %s, %s)
+        ''',
+        (name, spec, phone, email, lic)
     )
+    doctor_ids.append(cursor.lastrowid)  # lastrowid gives us the auto-generated ID
 
-    doctor_ids.append(cursor.lastrowid)
+connection.commit()  # Save all doctor rows to the database
+print(f'  Done. Inserted {len(doctor_ids)} doctors.')
 
-
-connection.commit()
-
-print(f"Done. Inserted {len(doctor_ids)} doctors.")
-
-
-# ============================================================
-# STEP 4: INSERT PATIENTS
-# ============================================================
-
-print()
-print(f"Inserting {NUM_PATIENTS} patients...")
+# ─── STEP 2: INSERT PATIENTS ────────────────────────────────────────────────
+print(f'Inserting {NUM_PATIENTS} patients...')
 
 patient_ids = []
 
 for i in range(NUM_PATIENTS):
-
-    name = fake.name()
-
-    email = f"patient{i + 1}@caresync.in"
-
-    password = DEFAULT_PASSWORD
-
-    dob = fake.date_of_birth(
-        minimum_age=5,
-        maximum_age=85
-    )
-
-    contact = generate_phone()
-
-    address = fake.address().replace(
-        '\n',
-        ', '
-    )
-
-    blood_group = random.choice(
-        BLOOD_GROUPS
-    )
+    name      = fake.name()
+    dob       = fake.date_of_birth(minimum_age=5, maximum_age=85)
+    gender    = random.choice(['Male', 'Female'])
+    phone     = '9' + str(random.randint(100000000, 999999999))
+    email     = f'patient{i+1}@example.com'
+    address   = fake.address().replace('\n', ', ')  # Remove line breaks from address
+    blood     = random.choice(BLOOD_GROUPS)
+    ec_name   = fake.name()   # Emergency contact name
+    ec_phone  = '9' + str(random.randint(100000000, 999999999))
 
     cursor.execute(
-        """
+        '''
         INSERT INTO patient
-        (
-            name,
-            email,
-            password_hash,
-            date_of_birth,
-            contact,
-            address,
-            blood_group
-        )
-        VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """,
-        (
-            name,
-            email,
-            password,
-            dob,
-            contact,
-            address,
-            blood_group
-        )
+            (full_name, date_of_birth, gender, phone, email, address,
+             blood_group, emergency_contact_name, emergency_contact_phone)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''',
+        (name, dob, gender, phone, email, address, blood, ec_name, ec_phone)
     )
-
-    patient_ids.append(
-        cursor.lastrowid
-    )
-
+    patient_ids.append(cursor.lastrowid)
 
 connection.commit()
+print(f'  Done. Inserted {len(patient_ids)} patients.')
 
-print(f"Done. Inserted {len(patient_ids)} patients.")
-
-
-# ============================================================
-# STEP 5: INSERT APPOINTMENTS
-# ============================================================
-
-print()
-print(f"Inserting {NUM_APPOINTMENTS} appointments...")
+# ─── STEP 3: INSERT APPOINTMENTS ────────────────────────────────────────────
+print(f'Inserting {NUM_APPOINTMENTS} appointments...')
 
 appointment_ids = []
 
+# Generate appointments over the past 2 years
 start_date = date.today() - timedelta(days=730)
+end_date   = date.today()
+
+hour_options   = list(range(9, 17))   # 9 AM to 4 PM
+minute_options = [0, 15, 30, 45]      # Every 15 minutes
 
 for _ in range(NUM_APPOINTMENTS):
+    p_id    = random.choice(patient_ids)
+    d_id    = random.choice(doctor_ids)
+    appt_dt = start_date + timedelta(days=random.randint(0, 730))
+    appt_tm = f'{random.choice(hour_options):02d}:{random.choice(minute_options):02d}:00'
+    reason  = 'Patient complaints of ' + random.choice(DIAGNOSES).lower()
+    diag    = random.choice(DIAGNOSES)
 
-    patient_id = random.choice(patient_ids)
-
-    doctor_id = random.choice(doctor_ids)
-
-    random_date = start_date + timedelta(
-        days=random.randint(0, 730)
-    )
-
-    hour = random.randint(9, 16)
-
-    minute = random.choice(
-        [0, 15, 30, 45]
-    )
-
-    appointment_datetime = datetime(
-        random_date.year,
-        random_date.month,
-        random_date.day,
-        hour,
-        minute
-    )
-
-    diagnosis = random.choice(
-        DIAGNOSES
-    )
-
-    reason = (
-        "Patient complaints of "
-        + diagnosis.lower()
-    )
-
-    status = random.choices(
-        [
-            'Completed',
-            'Scheduled',
-            'Cancelled'
-        ],
-        weights=[
-            80,
-            10,
-            10
-        ]
+    # Weight the status: 80% Completed, 10% Scheduled, 10% Cancelled
+    status  = random.choices(
+        ['Completed', 'Scheduled', 'Cancelled'],
+        weights=[80, 10, 10]
     )[0]
 
     cursor.execute(
-        """
+        '''
         INSERT INTO appointment
-        (
-            patient_id,
-            doctor_id,
-            date_and_time,
-            reason,
-            status
-        )
-        VALUES (%s, %s, %s, %s, %s)
-        """,
-        (
-            patient_id,
-            doctor_id,
-            appointment_datetime,
-            reason,
-            status
-        )
-    )
-
-    appointment_ids.append(
-        cursor.lastrowid
-    )
-
-
-connection.commit()
-
-print(
-    f"Done. Inserted "
-    f"{len(appointment_ids)} appointments."
-)
-
-
-# ============================================================
-# STEP 6: INSERT MEDICAL RECORDS
-# ============================================================
-
-print()
-print(
-    f"Inserting {NUM_MEDICAL_RECORDS} "
-    "medical records..."
-)
-
-medical_record_ids = []
-
-for _ in range(NUM_MEDICAL_RECORDS):
-
-    patient_id = random.choice(
-        patient_ids
-    )
-
-    doctor_id = random.choice(
-        doctor_ids
-    )
-
-    diagnosis = random.choice(
-        DIAGNOSES
-    )
-
-    medical_history = (
-        "Patient has a history related to "
-        + diagnosis
-        + "."
-    )
-
-    prescription = (
-        "Prescribed medication for "
-        + diagnosis
-        + "."
-    )
-
-    test_name = random.choice(
-        TESTS
-    )
-
-    test_result = random.choice(
-        [
-            "Normal",
-            "Mildly elevated",
-            "Within normal range",
-            "Requires follow-up",
-            "Abnormal"
-        ]
-    )
-
-    cursor.execute(
-        """
-        INSERT INTO medical_record
-        (
-            patient_id,
-            doctor_id,
-            medical_history,
-            diagnosis,
-            prescription,
-            test_name,
-            test_result
-        )
+            (patient_id, doctor_id, appointment_date, appointment_time,
+             reason, diagnosis, status)
         VALUES (%s, %s, %s, %s, %s, %s, %s)
-        """,
-        (
-            patient_id,
-            doctor_id,
-            medical_history,
-            diagnosis,
-            prescription,
-            test_name,
-            test_result
-        )
+        ''',
+        (p_id, d_id, appt_dt, appt_tm, reason, diag, status)
     )
-
-    medical_record_ids.append(
-        cursor.lastrowid
-    )
-
+    appointment_ids.append(cursor.lastrowid)
 
 connection.commit()
+print(f'  Done. Inserted {len(appointment_ids)} appointments.')
 
-print(
-    f"Done. Inserted "
-    f"{len(medical_record_ids)} medical records."
+# ─── STEP 4: INSERT BILLS ───────────────────────────────────────────────────
+print(f'Inserting {NUM_BILLS} bills...')
+
+# Only create bills for Completed appointments.
+# We need to find which appointments are Completed.
+cursor.execute(
+    'SELECT appointment_id, patient_id FROM appointment WHERE status = %s'
+    , ('Completed',)
 )
+completed_appointments = cursor.fetchall()  # Returns list of (appointment_id, patient_id)
 
+if len(completed_appointments) < NUM_BILLS:
+    print(f'  Note: Only {len(completed_appointments)} completed appointments available.')
+    print(f'  Will create one bill per completed appointment instead of {NUM_BILLS}.')
+    bills_to_create = completed_appointments
+else:
+    # Randomly pick NUM_BILLS from the completed appointments.
+    # random.sample ensures no appointment gets two bills (no duplicates).
+    bills_to_create = random.sample(completed_appointments, NUM_BILLS)
 
-# ============================================================
-# STEP 7: INSERT BILLING RECORDS
-# ============================================================
+# Determine the rejection rate for this run.
+# A random number between 8% and 12%.
+reject_rate = random.uniform(BILL_REJECT_LOW, BILL_REJECT_HIGH)
+print(f'  Bill rejection rate for this run: {reject_rate*100:.1f}%')
 
-print()
-print(f"Inserting {NUM_BILLS} billing records...")
+bills_inserted = 0
 
-billing_ids = []
+for (appt_id, p_id) in bills_to_create:
+    # Consultation fee between 300 and 3000 rupees.
+    total = round(random.uniform(300, 3000), 2)
 
-for _ in range(NUM_BILLS):
+    # Decide the bill status.
+    rand_val = random.random()  # A number between 0.0 and 1.0
 
-    patient_id = random.choice(
-        patient_ids
-    )
+    if rand_val < reject_rate:
+        # This bill is Rejected.
+        status         = 'Rejected'
+        amount_paid    = 0.00
+        discount       = 0.00
+        reject_reason  = random.choice(REJECTION_REASONS)
 
-    total_amount = round(
-        random.uniform(500, 50000),
-        2
-    )
+    elif rand_val < reject_rate + 0.10:
+        # Partially Paid: patient paid between 30% and 70%.
+        status         = 'Partially Paid'
+        paid_pct       = random.uniform(0.30, 0.70)
+        amount_paid    = round(total * paid_pct, 2)
+        discount       = 0.00
+        reject_reason  = None
 
-    insurance_provider = random.choice(
-        INSURANCE_PROVIDERS
-    )
-
-    claim_amount = round(
-        total_amount * random.uniform(
-            0.50,
-            1.00
-        ),
-        2
-    )
-
-    claim_status = random.choices(
-        [
-            'Approved',
-            'Pending',
-            'Rejected'
-        ],
-        weights=[
-            75,
-            15,
-            10
-        ]
-    )[0]
-
-    if claim_status == 'Rejected':
-
-        rejection_reason = random.choice(
-            REJECTION_REASONS
-        )
+    elif rand_val < reject_rate + 0.15:
+        # Pending: no payment yet.
+        status         = 'Pending'
+        amount_paid    = 0.00
+        discount       = 0.00
+        reject_reason  = None
 
     else:
+        # Paid: full amount paid, sometimes with a small discount.
+        status         = 'Paid'
+        discount       = round(total * random.uniform(0, 0.05), 2)  # 0-5% discount
+        amount_paid    = round(total - discount, 2)
+        reject_reason  = None
 
-        rejection_reason = None
+    # Bill date: a few days after the appointment date.
+    cursor.execute(
+        'SELECT appointment_date FROM appointment WHERE appointment_id = %s',
+        (appt_id,)
+    )
+    row = cursor.fetchone()
+    appt_date  = row[0]
+    bill_date  = appt_date + timedelta(days=random.randint(0, 2))
+    due_date   = bill_date + timedelta(days=30)
 
     cursor.execute(
-        """
+        '''
         INSERT INTO billing
-        (
-            patient_id,
-            total_amount,
-            insurance_provider,
-            claim_amount,
-            claim_status,
-            rejection_reason
-        )
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (
-            patient_id,
-            total_amount,
-            insurance_provider,
-            claim_amount,
-            claim_status,
-            rejection_reason
-        )
+            (appointment_id, patient_id, total_amount, amount_paid, discount,
+             status, rejection_reason, bill_date, due_date)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''',
+        (appt_id, p_id, total, amount_paid, discount,
+         status, reject_reason, bill_date, due_date)
     )
-
-    billing_ids.append(
-        cursor.lastrowid
-    )
-
+    bills_inserted += 1
 
 connection.commit()
+print(f'  Done. Inserted {bills_inserted} bills.')
 
-print(
-    f"Done. Inserted "
-    f"{len(billing_ids)} billing records."
-)
-
-
-# ============================================================
-# STEP 8: INSERT ACTIVITY LOGS
-# ============================================================
-
+# ─── STEP 5: VERIFY ROW COUNTS ──────────────────────────────────────────────
 print()
-print(
-    f"Inserting {NUM_ACTIVITY_LOGS} "
-    "activity logs..."
-)
+print('=== FINAL ROW COUNTS ===')
 
-user_types = [
-    'Patient',
-    'Doctor',
-    'Admin',
-    'Billing Staff'
-]
-
-
-for _ in range(NUM_ACTIVITY_LOGS):
-
-    user_type = random.choice(
-        user_types
-    )
-
-    # Select an ID according to the user type
-    if user_type == 'Patient':
-
-        user_id = random.choice(
-            patient_ids
-        )
-
-    elif user_type == 'Doctor':
-
-        user_id = random.choice(
-            doctor_ids
-        )
-
-    elif user_type == 'Admin':
-
-        user_id = random.choice(
-            admin_ids
-        )
-
-    else:
-
-        user_id = random.choice(
-            billing_staff_ids
-        )
-
-
-    action = random.choice(
-        ACTIONS
-    )
-
-    target_table = random.choice(
-        TARGET_TABLES
-    )
-
-    target_id = random.randint(
-        1,
-        100
-    )
-
-    logged_at = fake.date_time_between(
-        start_date='-2y',
-        end_date='now'
-    )
-
-    cursor.execute(
-        """
-        INSERT INTO activity_log
-        (
-            user_type,
-            user_id,
-            action,
-            target_table,
-            target_id,
-            logged_at
-        )
-        VALUES (%s, %s, %s, %s, %s, %s)
-        """,
-        (
-            user_type,
-            user_id,
-            action,
-            target_table,
-            target_id,
-            logged_at
-        )
-    )
-
-
-connection.commit()
-
-print(
-    f"Done. Inserted "
-    f"{NUM_ACTIVITY_LOGS} activity logs."
-)
-
-
-# ============================================================
-# FINAL ROW COUNTS
-# ============================================================
-
-print()
-print("============================================")
-print("        CARESYNC FINAL ROW COUNTS")
-print("============================================")
-
-tables = [
-    'patient',
-    'doctor',
-    'admin',
-    'billing_staff',
-    'appointment',
-    'medical_record',
-    'billing',
-    'activity_log'
-]
-
-
-for table in tables:
-
-    cursor.execute(
-        f"SELECT COUNT(*) FROM {table}"
-    )
-
+for table in ['doctor', 'patient', 'appointment', 'billing', 'activity_log']:
+    cursor.execute(f'SELECT COUNT(*) FROM {table}')
     count = cursor.fetchone()[0]
+    print(f'  {table:20s}: {count} rows')
 
-    print(
-        f"{table:20s}: {count}"
-    )
-
-
-# ============================================================
-# CLOSE CONNECTION
-# ============================================================
-
+# ─── CLEANUP ────────────────────────────────────────────────────────────────
 cursor.close()
 connection.close()
-
 print()
-print("============================================")
-print("CareSync sample data generation completed.")
-print("Database is ready for use.")
-print("============================================")
+print('Done. Database is ready for use.')
