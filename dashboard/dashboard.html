@@ -1,183 +1,272 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CareSync Hospital Dashboard</title>
 
-    <!--
-        Vue 3 is loaded from a CDN (Content Delivery Network).
-        This means no installation is needed.
-        The browser downloads Vue automatically when the page opens.
-    -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* ── Reset and base ──────────────────────────────── */
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         body {
-            font-family: 'Segoe UI', Arial, sans-serif;
+            font-family: "Segoe UI", Arial, sans-serif;
             background: #f0f2f5;
             color: #1a1a1a;
         }
 
-        /* ── Top navigation bar ──────────────────────────── */
         .navbar {
             background: #1f3864;
-            color: #ffffff;
+            color: white;
             padding: 16px 32px;
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
+            gap: 20px;
         }
-        .navbar h1 { font-size: 22px; font-weight: 600; }
-        .navbar span { font-size: 14px; opacity: 0.8; }
 
-        /* ── Page wrapper ────────────────────────────────── */
-        .page { max-width: 1200px; margin: 0 auto; padding: 32px 24px; }
+        .navbar h1 { font-size: 22px; }
+        .navbar span { font-size: 13px; opacity: .85; }
 
-        /* ── Section headings ────────────────────────────── */
+        .page {
+            max-width: 1250px;
+            margin: auto;
+            padding: 30px 22px;
+        }
+
         .section-title {
             font-size: 18px;
-            font-weight: 600;
             color: #1f3864;
-            margin-bottom: 16px;
-            padding-bottom: 6px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            padding-bottom: 7px;
             border-bottom: 2px solid #1f3864;
         }
 
-        /* ── Summary cards ───────────────────────────────── */
         .cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-            margin-bottom: 40px;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 15px;
+            margin-bottom: 32px;
         }
+
         .card {
-            background: #ffffff;
+            background: white;
             border-radius: 8px;
-            padding: 24px 20px;
+            padding: 20px;
             border-left: 4px solid #1f3864;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+            box-shadow: 0 1px 5px rgba(0,0,0,.08);
         }
-        .card .label {
-            font-size: 13px;
-            color: #555;
+
+        .card.red { border-left-color: #c0392b; }
+        .card.green { border-left-color: #1a7a4a; }
+
+        .label {
+            font-size: 12px;
+            color: #666;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 8px;
+            margin-bottom: 7px;
         }
-        .card .value {
-            font-size: 32px;
+
+        .value {
+            font-size: 28px;
             font-weight: 700;
             color: #1f3864;
         }
-        .card.red   { border-left-color: #c0392b; }
-        .card.red .value { color: #c0392b; }
-        .card.green { border-left-color: #1a7a4a; }
-        .card.green .value { color: #1a7a4a; }
 
-        /* ── Tab buttons ─────────────────────────────────── */
-        .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+        .red .value { color: #c0392b; }
+        .green .value { color: #1a7a4a; }
+
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
         .tab-btn {
-            padding: 8px 20px;
             border: 2px solid #1f3864;
-            background: #ffffff;
+            background: white;
             color: #1f3864;
-            border-radius: 4px;
+            padding: 9px 18px;
+            border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
             font-weight: 600;
-            transition: all 0.15s;
         }
-        .tab-btn.active { background: #1f3864; color: #ffffff; }
 
-        /* ── Search box ──────────────────────────────────── */
-        .search-box {
-            width: 100%;
-            max-width: 360px;
-            padding: 8px 14px;
-            border: 1px solid #cccccc;
-            border-radius: 4px;
-            font-size: 14px;
+        .tab-btn.active {
+            background: #1f3864;
+            color: white;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
             margin-bottom: 16px;
-            outline: none;
         }
-        .search-box:focus { border-color: #1f3864; }
 
-        /* ── Data table ──────────────────────────────────── */
-        .table-wrap {
-            background: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-            overflow-x: auto;
-            margin-bottom: 40px;
+        .search-box {
+            padding: 10px 13px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: 260px;
         }
+
+        .primary-btn {
+            padding: 10px 18px;
+            border: 0;
+            border-radius: 5px;
+            background: #1f3864;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .secondary-btn {
+            padding: 10px 18px;
+            border: 1px solid #1f3864;
+            border-radius: 5px;
+            background: white;
+            color: #1f3864;
+            cursor: pointer;
+        }
+
+        .table-wrap {
+            background: white;
+            border-radius: 8px;
+            overflow-x: auto;
+            box-shadow: 0 1px 5px rgba(0,0,0,.08);
+            margin-bottom: 30px;
+        }
+
         table { width: 100%; border-collapse: collapse; font-size: 14px; }
         th {
             background: #1f3864;
-            color: #ffffff;
-            padding: 12px 16px;
+            color: white;
+            padding: 12px 14px;
             text-align: left;
-            font-weight: 600;
-            font-size: 13px;
+            white-space: nowrap;
         }
-        td { padding: 10px 16px; border-bottom: 1px solid #f0f0f0; }
-        tr:last-child td { border-bottom: none; }
+        td {
+            padding: 10px 14px;
+            border-bottom: 1px solid #eee;
+        }
         tr:nth-child(even) td { background: #fafafa; }
 
-        /* ── Status badges ───────────────────────────────── */
         .badge {
             display: inline-block;
-            padding: 3px 10px;
+            padding: 4px 10px;
             border-radius: 12px;
             font-size: 12px;
-            font-weight: 600;
+            font-weight: 700;
         }
-        .badge-paid     { background: #d4edda; color: #155724; }
-        .badge-pending  { background: #fff3cd; color: #856404; }
-        .badge-partial  { background: #d1ecf1; color: #0c5460; }
-        .badge-rejected { background: #f8d7da; color: #721c24; }
 
-        /* ── Loading and error states ────────────────────── */
-        .loading { text-align: center; padding: 40px; color: #888; font-size: 16px; }
-        .error   { text-align: center; padding: 40px; color: #c0392b; font-size: 15px; }
+        .badge-approved { background: #d4edda; color: #155724; }
+        .badge-pending { background: #fff3cd; color: #856404; }
+        .badge-rejected { background: #f8d7da; color: #721c24; }
+        .badge-scheduled { background: #d1ecf1; color: #0c5460; }
+        .badge-completed { background: #d4edda; color: #155724; }
+        .badge-cancelled { background: #f8d7da; color: #721c24; }
+
+        .message {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .error { color: #c0392b; }
+        .success { color: #1a7a4a; }
+
+        .patient-detail {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 22px;
+            box-shadow: 0 1px 5px rgba(0,0,0,.08);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 14px;
+        }
+
+        .detail-item {
+            background: #f7f8fa;
+            padding: 12px;
+            border-radius: 5px;
+        }
+
+        .detail-item small {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+            gap: 18px;
+            margin-bottom: 35px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 18px;
+            border-radius: 8px;
+            box-shadow: 0 1px 5px rgba(0,0,0,.08);
+            min-height: 330px;
+        }
+
+        .chart-card h3 {
+            color: #1f3864;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 255px;
+        }
+
+        .hint {
+            font-size: 12px;
+            color: #777;
+            margin-top: 7px;
+        }
+
+        @media (max-width: 650px) {
+            .navbar { flex-direction: column; align-items: flex-start; }
+            .page { padding: 20px 12px; }
+        }
     </style>
 </head>
 
 <body>
-
-<!-- ───────────────────────────────────────────────────────────────────────
-     Navigation Bar
-     The {{ }} syntax is Vue. It means: display the value of this variable.
-──────────────────────────────────────────────────────────────────────────── -->
-<div class="navbar">
-    <h1>CareSync Hospital Dashboard</h1>
-    <span>Live Data  |  MySQL  |  FastAPI  |  Vue.js</span>
-</div>
-
-<!-- ───────────────────────────────────────────────────────────────────────
-     Main application div. id='app' is what Vue attaches to.
-──────────────────────────────────────────────────────────────────────────── -->
 <div id="app">
+    <div class="navbar">
+        <h1>CareSync Hospital Dashboard</h1>
+        <span>MySQL | FastAPI | Vue.js</span>
+    </div>
+
     <div class="page">
 
-        <!-- Loading state: shown while data is being fetched -->
-        <div v-if="loading" class="loading">Loading hospital data...</div>
+        <div v-if="loading" class="message">Loading CareSync data...</div>
 
-        <!-- Error state: shown if the API cannot be reached -->
-        <div v-else-if="error" class="error">
-            Cannot connect to the backend server.<br/>
-            Make sure uvicorn is running in your Command Prompt.<br/>
-            Command: uvicorn main:app --reload
+        <div v-else-if="error" class="message error">
+            <strong>Cannot connect to the backend.</strong><br><br>
+            Start FastAPI with:
+            <br><code>uvicorn main:app --reload</code>
         </div>
 
-        <!-- Main content: shown when data has loaded successfully -->
         <div v-else>
-
-            <!-- ── Summary Cards ────────────────────────────────────── -->
             <p class="section-title">Hospital Summary</p>
+
             <div class="cards">
                 <div class="card">
                     <div class="label">Total Patients</div>
@@ -188,11 +277,11 @@
                     <div class="value">{{ summary.total_doctors }}</div>
                 </div>
                 <div class="card">
-                    <div class="label">Total Appointments</div>
+                    <div class="label">Appointments</div>
                     <div class="value">{{ summary.total_appointments }}</div>
                 </div>
                 <div class="card">
-                    <div class="label">Total Bills</div>
+                    <div class="label">Bills</div>
                     <div class="value">{{ summary.total_bills }}</div>
                 </div>
                 <div class="card red">
@@ -200,235 +289,548 @@
                     <div class="value">{{ summary.rejection_rate }}%</div>
                 </div>
                 <div class="card green">
-                    <div class="label">Revenue Collected</div>
-                    <div class="value">Rs {{ formatNumber(summary.total_revenue) }}</div>
+                    <div class="label">Total Revenue</div>
+                    <div class="value">₹{{ formatNumber(summary.total_revenue) }}</div>
                 </div>
             </div>
 
-            <!-- ── Tab Buttons ──────────────────────────────────────── -->
+            <p class="section-title">Dashboard Analytics</p>
+
+            <div class="charts">
+                <div class="chart-card">
+                    <h3>Revenue Overview</h3>
+                    <div class="chart-container">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                    <p class="hint">
+                        The current database has no billing date, so revenue is grouped by claim status.
+                    </p>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Appointment Heatmap</h3>
+                    <div class="chart-container">
+                        <canvas id="heatmapChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <h3>Blood Group Distribution</h3>
+                    <div class="chart-container">
+                        <canvas id="bloodChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div class="tabs">
-                <!--
-                    @click is Vue shorthand for onclick.
-                    :class is Vue shorthand for binding CSS classes dynamically.
-                    When activeTab equals 'patients', the tab-btn gets the 'active' class.
-                -->
-                <button class="tab-btn" :class="{ active: activeTab === 'patients' }"
+                <button class="tab-btn" :class="{active: activeTab === 'patients'}"
                         @click="activeTab = 'patients'">Patients</button>
-                <button class="tab-btn" :class="{ active: activeTab === 'billing' }"
+                <button class="tab-btn" :class="{active: activeTab === 'patientDetail'}"
+                        @click="activeTab = 'patientDetail'">Patient Search</button>
+                <button class="tab-btn" :class="{active: activeTab === 'appointments'}"
+                        @click="activeTab = 'appointments'">Appointments</button>
+                <button class="tab-btn" :class="{active: activeTab === 'billing'}"
                         @click="activeTab = 'billing'">Billing</button>
-                <button class="tab-btn" :class="{ active: activeTab === 'doctors' }"
+                <button class="tab-btn" :class="{active: activeTab === 'doctors'}"
                         @click="activeTab = 'doctors'">Doctors</button>
             </div>
 
-            <!-- ── Patients Tab ─────────────────────────────────────── -->
-            <!--
-                v-if="activeTab === 'patients'" means:
-                only show this section when the Patients tab is active.
-            -->
+            <!-- Existing patient list -->
             <div v-if="activeTab === 'patients'">
-                <input
-                    class="search-box"
-                    v-model="patientSearch"
-                    placeholder="Search patient by name..."
-                />
+                <input class="search-box"
+                       v-model="patientSearch"
+                       placeholder="Search patient by name...">
+
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Full Name</th>
-                                <th>Gender</th>
-                                <th>Blood Group</th>
-                                <th>Date of Birth</th>
-                                <th>Registered On</th>
-                            </tr>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Blood Group</th>
+                            <th>Date of Birth</th>
+                            <th>Registered On</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <!--
-                                v-for loops through the filteredPatients array.
-                                :key is required by Vue to track each row efficiently.
-                            -->
-                            <tr v-for="p in filteredPatients" :key="p.patient_id">
-                                <td>{{ p.patient_id }}</td>
-                                <td>{{ p.full_name }}</td>
-                                <td>{{ p.gender }}</td>
-                                <td>{{ p.blood_group }}</td>
-                                <td>{{ p.date_of_birth }}</td>
-                                <td>{{ p.registered_on }}</td>
-                            </tr>
-                            <tr v-if="filteredPatients.length === 0">
-                                <td colspan="6" style="text-align:center; color:#888;">
-                                    No patients match your search.
-                                </td>
-                            </tr>
+                        <tr v-for="p in filteredPatients" :key="p.patient_id">
+                            <td>{{ p.patient_id }}</td>
+                            <td>{{ p.name }}</td>
+                            <td>{{ p.email }}</td>
+                            <td>{{ p.blood_group || 'Unknown' }}</td>
+                            <td>{{ p.date_of_birth }}</td>
+                            <td>{{ p.registered_on }}</td>
+                        </tr>
+                        <tr v-if="filteredPatients.length === 0">
+                            <td colspan="6" style="text-align:center;">No patients found.</td>
+                        </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- ── Billing Tab ──────────────────────────────────────── -->
+            <!-- Day 6: GET /patients/{patient_id} -->
+            <div v-if="activeTab === 'patientDetail'">
+                <div class="search-row">
+                    <input class="search-box"
+                           type="number"
+                           min="1"
+                           v-model="patientId"
+                           placeholder="Enter Patient ID">
+                    <button class="primary-btn" @click="searchPatient">Search</button>
+                    <button class="secondary-btn" @click="clearPatient">Clear</button>
+                </div>
+
+                <div v-if="patientError" class="message error">
+                    {{ patientError }}
+                </div>
+
+                <div v-if="selectedPatient" class="patient-detail">
+                    <h3 style="color:#1f3864; margin-bottom:15px;">
+                        Patient Details
+                    </h3>
+
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <small>Patient ID</small>
+                            <strong>{{ selectedPatient.patient_id }}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <small>Name</small>
+                            <strong>{{ selectedPatient.name }}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <small>Email</small>
+                            <strong>{{ selectedPatient.email }}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <small>Blood Group</small>
+                            <strong>{{ selectedPatient.blood_group || 'Not provided' }}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <small>Date of Birth</small>
+                            <strong>{{ selectedPatient.date_of_birth }}</strong>
+                        </div>
+                        <div class="detail-item">
+                            <small>Contact</small>
+                            <strong>{{ selectedPatient.contact || 'Not provided' }}</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Day 7: GET /patients/{patient_id}/appointments -->
+            <div v-if="activeTab === 'appointments'">
+                <div class="search-row">
+                    <input class="search-box"
+                           type="number"
+                           min="1"
+                           v-model="appointmentPatientId"
+                           placeholder="Enter Patient ID">
+                    <button class="primary-btn" @click="loadAppointments">
+                        Load Appointments
+                    </button>
+                </div>
+
+                <div v-if="appointmentError" class="message error">
+                    {{ appointmentError }}
+                </div>
+
+                <div v-if="appointmentSearched" class="table-wrap">
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>Appointment ID</th>
+                            <th>Doctor</th>
+                            <th>Specialization</th>
+                            <th>Date & Time</th>
+                            <th>Reason</th>
+                            <th>Status</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="a in patientAppointments" :key="a.appointment_id">
+                            <td>{{ a.appointment_id }}</td>
+                            <td>{{ a.doctor_name }}</td>
+                            <td>{{ a.specialization }}</td>
+                            <td>{{ a.date_and_time }}</td>
+                            <td>{{ a.reason || '-' }}</td>
+                            <td>
+                                <span class="badge" :class="statusClass(a.status)">
+                                    {{ a.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr v-if="patientAppointments.length === 0">
+                            <td colspan="6" style="text-align:center;">
+                                No appointments found for this patient.
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Billing -->
             <div v-if="activeTab === 'billing'">
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr>
-                                <th>Bill ID</th>
-                                <th>Patient Name</th>
-                                <th>Total Amount</th>
-                                <th>Amount Paid</th>
-                                <th>Status</th>
-                                <th>Bill Date</th>
-                            </tr>
+                        <tr>
+                            <th>Bill ID</th>
+                            <th>Patient</th>
+                            <th>Total Amount</th>
+                            <th>Insurance Provider</th>
+                            <th>Claim Amount</th>
+                            <th>Claim Status</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="b in bills" :key="b.bill_id">
-                                <td>{{ b.bill_id }}</td>
-                                <td>{{ b.patient_name }}</td>
-                                <td>Rs {{ b.total_amount.toFixed(2) }}</td>
-                                <td>Rs {{ b.amount_paid.toFixed(2) }}</td>
-                                <td>
-                                    <!--
-                                        badgeClass() is a method defined in the Vue app below.
-                                        It returns the correct CSS class based on the status value.
-                                    -->
-                                    <span class="badge" :class="badgeClass(b.status)">
-                                        {{ b.status }}
-                                    </span>
-                                </td>
-                                <td>{{ b.bill_date }}</td>
-                            </tr>
+                        <tr v-for="b in bills" :key="b.bill_id">
+                            <td>{{ b.bill_id }}</td>
+                            <td>{{ b.patient_name }}</td>
+                            <td>₹{{ Number(b.total_amount).toFixed(2) }}</td>
+                            <td>{{ b.insurance_provider || '-' }}</td>
+                            <td>
+                                {{ b.claim_amount == null ? '-' : '₹' + Number(b.claim_amount).toFixed(2) }}
+                            </td>
+                            <td>
+                                <span class="badge" :class="statusClass(b.claim_status)">
+                                    {{ b.claim_status }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr v-if="bills.length === 0">
+                            <td colspan="6" style="text-align:center;">No bills found.</td>
+                        </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- ── Doctors Tab ──────────────────────────────────────── -->
+            <!-- Doctors -->
             <div v-if="activeTab === 'doctors'">
                 <div class="table-wrap">
                     <table>
                         <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Full Name</th>
-                                <th>Specialisation</th>
-                                <th>Completed Appointments</th>
-                            </tr>
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Specialization</th>
+                            <th>Completed Appointments</th>
+                        </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="d in doctors" :key="d.doctor_id">
-                                <td>{{ d.doctor_id }}</td>
-                                <td>{{ d.full_name }}</td>
-                                <td>{{ d.specialisation }}</td>
-                                <td>{{ d.total_appointments }}</td>
-                            </tr>
+                        <tr v-for="d in doctors" :key="d.doctor_id">
+                            <td>{{ d.doctor_id }}</td>
+                            <td>{{ d.name }}</td>
+                            <td>{{ d.specialization }}</td>
+                            <td>{{ d.total_appointments }}</td>
+                        </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-
-        </div> <!-- end v-else -->
-    </div> <!-- end page -->
-</div> <!-- end #app -->
+        </div>
+    </div>
+</div>
 
 <script>
-    // Vue.createApp defines the entire frontend application.
-    // data() holds all the variables the page uses.
-    // methods holds all the functions the page uses.
-    // mounted() runs automatically when the page first loads.
+const { createApp } = Vue;
 
-    const { createApp } = Vue;
+createApp({
+    data() {
+        return {
+            base: "http://127.0.0.1:8000",
 
-    createApp({
-        data() {
-            return {
-                // State flags
-                loading:  true,   // true while waiting for API response
-                error:    false,  // true if API call fails
+            loading: true,
+            error: false,
 
-                // Which tab is currently visible
-                activeTab: 'patients',
+            activeTab: "patients",
 
-                // Search box value for patient filter
-                patientSearch: '',
+            summary: {},
+            patients: [],
+            bills: [],
+            doctors: [],
 
-                // Data from the API
-                summary:  {},
-                patients: [],
-                bills:    [],
-                doctors:  [],
-            };
+            patientSearch: "",
+            patientId: "",
+            selectedPatient: null,
+            patientError: "",
+
+            appointmentPatientId: "",
+            patientAppointments: [],
+            appointmentError: "",
+            appointmentSearched: false,
+
+            charts: {}
+        };
+    },
+
+    computed: {
+        filteredPatients() {
+            const term = this.patientSearch.trim().toLowerCase();
+
+            if (!term) {
+                return this.patients;
+            }
+
+            return this.patients.filter(p =>
+                (p.name || "").toLowerCase().includes(term)
+            );
+        }
+    },
+
+    methods: {
+        formatNumber(number) {
+            return Number(number || 0).toLocaleString("en-IN");
         },
 
-        computed: {
-            // computed properties recalculate automatically
-            // whenever their dependencies change.
-            // filteredPatients updates every time patientSearch changes.
-            filteredPatients() {
-                const term = this.patientSearch.toLowerCase();
-                if (!term) return this.patients;
-                return this.patients.filter(p =>
-                    p.full_name.toLowerCase().includes(term)
-                );
-            },
+        statusClass(status) {
+            const value = String(status || "").toLowerCase();
+
+            if (value === "approved" || value === "completed") {
+                return "badge-approved";
+            }
+            if (value === "rejected" || value === "cancelled") {
+                return "badge-rejected";
+            }
+            if (value === "scheduled") {
+                return "badge-scheduled";
+            }
+            return "badge-pending";
         },
 
-        methods: {
-            // Returns the correct CSS badge class for a billing status
-            badgeClass(status) {
-                const map = {
-                    'Paid':          'badge-paid',
-                    'Pending':       'badge-pending',
-                    'Partially Paid':'badge-partial',
-                    'Rejected':      'badge-rejected',
-                };
-                return map[status] || '';
-            },
+        async fetchJSON(url) {
+            const response = await fetch(url);
 
-            // Formats large numbers with commas: 1234567 becomes 1,234,567
-            formatNumber(n) {
-                return Number(n).toLocaleString('en-IN');
-            },
-
-            // Fetches all data from the FastAPI backend
-            async fetchAll() {
+            if (!response.ok) {
+                let message = "Request failed";
                 try {
-                    // The base URL where FastAPI is running
-                    const base = 'http://127.0.0.1:8000';
+                    const body = await response.json();
+                    message = body.detail || message;
+                } catch (_) {}
+                throw new Error(message);
+            }
 
-                    // fetch() is a built-in browser function that calls an API.
-                    // Promise.all runs all four requests at the same time
-                    // instead of one after the other, making the page load faster.
-                    const [s, p, b, d] = await Promise.all([
-                        fetch(`${base}/summary`).then(r => r.json()),
-                        fetch(`${base}/patients`).then(r => r.json()),
-                        fetch(`${base}/billing`).then(r => r.json()),
-                        fetch(`${base}/doctors`).then(r => r.json()),
-                    ]);
+            return response.json();
+        },
 
-                    // Store the returned data in our variables
-                    this.summary  = s;
-                    this.patients = p.patients;
-                    this.bills    = b.bills;
-                    this.doctors  = d.doctors;
-                    this.loading  = false;
+        async fetchAll() {
+            try {
+                const [summary, patients, bills, doctors] = await Promise.all([
+                    this.fetchJSON(`${this.base}/summary`),
+                    this.fetchJSON(`${this.base}/patients`),
+                    this.fetchJSON(`${this.base}/billing`),
+                    this.fetchJSON(`${this.base}/doctors`)
+                ]);
 
-                } catch (err) {
-                    // If any request fails, show the error state
-                    console.error('API error:', err);
-                    this.loading = false;
-                    this.error   = true;
+                this.summary = summary;
+                this.patients = patients.patients;
+                this.bills = bills.bills;
+                this.doctors = doctors.doctors;
+
+                this.loading = false;
+
+                // Load all three dashboard analytics sections.
+                await this.loadCharts();
+            } catch (err) {
+                console.error(err);
+                this.loading = false;
+                this.error = true;
+            }
+        },
+
+        async loadCharts() {
+            try {
+                const [revenue, heatmap, blood] = await Promise.all([
+                    this.fetchJSON(`${this.base}/dashboard/revenue`),
+                    this.fetchJSON(`${this.base}/dashboard/appointments-heatmap`),
+                    this.fetchJSON(`${this.base}/dashboard/blood-groups`)
+                ]);
+
+                this.$nextTick(() => {
+                    this.createRevenueChart(revenue.data);
+                    this.createHeatmapChart(heatmap.data);
+                    this.createBloodChart(blood.data);
+                });
+            } catch (err) {
+                console.error("Chart API error:", err);
+            }
+        },
+
+        createRevenueChart(rows) {
+            const ctx = document.getElementById("revenueChart");
+            if (!ctx) return;
+
+            if (this.charts.revenue) this.charts.revenue.destroy();
+
+            this.charts.revenue = new Chart(ctx, {
+                type: "bar",
+                data: {
+                    labels: rows.map(r => r.claim_status),
+                    datasets: [{
+                        label: "Revenue (₹)",
+                        data: rows.map(r => r.revenue)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
                 }
-            },
+            });
         },
 
-        // mounted() runs automatically as soon as the page finishes loading.
-        // This is where we trigger the first data fetch.
-        mounted() {
-            this.fetchAll();
+        createHeatmapChart(rows) {
+            const ctx = document.getElementById("heatmapChart");
+            if (!ctx) return;
+
+            if (this.charts.heatmap) this.charts.heatmap.destroy();
+
+            const days = ["Sunday", "Monday", "Tuesday", "Wednesday",
+                          "Thursday", "Friday", "Saturday"];
+
+            const matrix = [];
+            for (let day = 1; day <= 7; day++) {
+                for (let hour = 0; hour <= 23; hour++) {
+                    const found = rows.find(
+                        r => Number(r.day_number) === day && Number(r.hour) === hour
+                    );
+
+                    matrix.push({
+                        x: `${String(hour).padStart(2, "0")}:00`,
+                        y: days[day - 1],
+                        value: found ? Number(found.total) : 0
+                    });
+                }
+            }
+
+            // Chart.js does not include a native heatmap type.
+            // A bubble chart gives a simple heatmap-like visualization
+            // without requiring another chart plugin.
+            this.charts.heatmap = new Chart(ctx, {
+                type: "bubble",
+                data: {
+                    datasets: [{
+                        label: "Appointments",
+                        data: matrix.map(item => ({
+                            x: item.x,
+                            y: days.indexOf(item.y) + 1,
+                            r: Math.min(18, 3 + item.value * 2)
+                        }))
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: "category",
+                            labels: Array.from({length: 24}, (_, i) =>
+                                `${String(i).padStart(2, "0")}:00`
+                            ),
+                            ticks: { maxTicksLimit: 8 }
+                        },
+                        y: {
+                            min: 1,
+                            max: 7,
+                            ticks: {
+                                stepSize: 1,
+                                callback: value => days[value - 1] || ""
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: context => {
+                                    const item = matrix[context.dataIndex];
+                                    return `${item.y}, ${item.x}: ${item.value} appointment(s)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         },
 
-    }).mount('#app');  // Attach Vue to the div with id='app'
+        createBloodChart(rows) {
+            const ctx = document.getElementById("bloodChart");
+            if (!ctx) return;
+
+            if (this.charts.blood) this.charts.blood.destroy();
+
+            this.charts.blood = new Chart(ctx, {
+                type: "doughnut",
+                data: {
+                    labels: rows.map(r => r.blood_group),
+                    datasets: [{
+                        label: "Patients",
+                        data: rows.map(r => r.total)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+        },
+
+        async searchPatient() {
+            this.patientError = "";
+            this.selectedPatient = null;
+
+            if (!this.patientId) {
+                this.patientError = "Please enter a Patient ID.";
+                return;
+            }
+
+            try {
+                this.selectedPatient = await this.fetchJSON(
+                    `${this.base}/patients/${encodeURIComponent(this.patientId)}`
+                );
+            } catch (err) {
+                this.patientError =
+                    err.message === "Patient not found"
+                        ? "Patient not found."
+                        : err.message;
+            }
+        },
+
+        clearPatient() {
+            this.patientId = "";
+            this.selectedPatient = null;
+            this.patientError = "";
+        },
+
+        async loadAppointments() {
+            this.appointmentError = "";
+            this.patientAppointments = [];
+            this.appointmentSearched = false;
+
+            if (!this.appointmentPatientId) {
+                this.appointmentError = "Please enter a Patient ID.";
+                return;
+            }
+
+            try {
+                const result = await this.fetchJSON(
+                    `${this.base}/patients/${encodeURIComponent(this.appointmentPatientId)}/appointments`
+                );
+
+                this.patientAppointments = result.appointments;
+                this.appointmentSearched = true;
+            } catch (err) {
+                this.appointmentError = err.message;
+            }
+        }
+    },
+
+    mounted() {
+        this.fetchAll();
+    }
+}).mount("#app");
 </script>
-
 </body>
 </html>
